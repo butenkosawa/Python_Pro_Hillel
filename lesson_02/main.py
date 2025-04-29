@@ -14,11 +14,13 @@ struct Teacher: no structure since authentication process
 storage = [
     {
         "name": "John Doe",
-        "marks": [4, 12, 8, 9, 9, 10, 11]
+        "marks": [4, 12, 8, 9, 9, 10, 11],
+        "info": "John is 19 y.o. Interest: boxing",
     },
     {
         "name": "Marry Black",
-        "marks": [9, 12, 8, 4, 1, 9, 7]
+        "marks": [9, 12, 8, 4, 1, 9, 7],
+        "info": "John is 19 y.o. Interest: boxing"
     }
 ]
 
@@ -40,7 +42,8 @@ def represent_student():
         info = (
             "==========================\n"
             f"Student: {student['name']}\n"
-            f"Marks: {student['marks']}"
+            f"Marks: {student['marks']}\n"
+            f"Info: {student['info']}"
         )
 
         print(info)
