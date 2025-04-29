@@ -65,7 +65,7 @@ def ask_student_payload():
     return parse(user_data)
 
 
-def handle_command(command: str):
+def student_management_command_handle(command: str):
     if command == "show":
         represent_student()
     elif command == "add":
@@ -77,7 +77,31 @@ def handle_command(command: str):
             print("The student's data is NOT correct. Please try again.")
 
 
+def handle_user_input():
+    OPERATIONAL_COMMANDS = ("quit", "help")
+    STUDENT_MANAGMENT_COMMANDS = ("show", "add")
+    AVAILADLE_COMMANDS = (*OPERATIONAL_COMMANDS, *STUDENT_MANAGMENT_COMMANDS)
+    HELP_MESSAGE = (
+        "Hello in the Jornal! Use the menu to interact with the application.\n"
+            f"Available commands: {AVAILADLE_COMMANDS}"
+    )
+
+    print(HELP_MESSAGE)
+
+    while True:
+        command = input("Select command: ")
+
+        if command == "quit":
+            print("\nThanks for using Jornal application.")
+            break
+        elif command == "help":
+            print(HELP_MESSAGE)
+        else:
+            student_management_command_handle(command)
+
+
 if __name__ == '__main__':
-    handle_command("show")
-    handle_command("add")
-    handle_command("show")
+    handle_user_input()
+    # handle_command("show")
+    # handle_command("add")
+    # handle_command("show")
