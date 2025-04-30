@@ -13,61 +13,73 @@ struct Teacher: no structure since authentication process
 
 storage: list[dict] = [
     {
+        "id": 1,
         "name": "John Doe",
         "marks": [4, 12, 8, 9, 9, 10, 11],
         "info": "John is 19 y.o. Interest: boxing",
     },
     {
+        "id": 2,
         "name": "Marry Black",
         "marks": [9, 12, 8, 4, 1, 9, 7],
         "info": "John is 19 y.o. Interest: music"
     },
     {
+        "id": 3,
         "name": "Alice Smith",
         "marks": [2, 11, 8, 10, 3, 4, 12],
         "info": "Alice is 18 y.o. Interest: reading"
     },
     {
+        "id": 4,
         "name": "Bob Johnson",
         "marks": [5, 7, 12, 6, 8, 10, 9],
         "info": "Bob is 20 y.o. Interest: swimming"
     },
     {
+        "id": 5,
         "name": "Charlie Davis",
         "marks": [9, 4, 6, 11, 12, 5, 8],
         "info": "Charlie is 17 y.o. Interest: coding"
     },
     {
+        "id": 6,
         "name": "Diana Evans",
         "marks": [7, 6, 12, 9, 1, 2, 10],
         "info": "Diana is 21 y.o. Interest: football"
     },
     {
+        "id": 7,
         "name": "Ethan Foster",
         "marks": [10, 8, 6, 5, 7, 3, 9],
         "info": "Ethan is 19 y.o. Interest: chess"
     },
     {
-        "name": "Fiona Green",
+        "id": 8,
+        "name": "Bob Johnson",
         "marks": [3, 5, 9, 11, 12, 7, 4],
         "info": "Fiona is 20 y.o. Interest: music"
     },
     {
+        "id": 9,
         "name": "George Harris",
         "marks": [6, 10, 8, 9, 2, 11, 1],
         "info": "George is 18 y.o. Interest: hiking"
     },
     {
+        "id": 10,
         "name": "Hannah Irving",
         "marks": [11, 2, 4, 6, 7, 8, 12],
         "info": "Hannah is 17 y.o. Interest: photography"
     },
     {
+        "id": 11,
         "name": "Ian Jackson",
         "marks": [8, 12, 7, 9, 10, 4, 3],
         "info": "Ian is 21 y.o. Interest: gaming"
     },
     {
+        "id": 12,
         "name": "Julia King",
         "marks": [1, 6, 8, 12, 5, 11, 9],
         "info": "Julia is 20 y.o. Interest: basketball"
@@ -89,27 +101,27 @@ def add_student(student: dict):
 
 def show_students():
     print("==========================\n")
-    for index, student in enumerate(storage, 1):
-        print(f"{index}. Student: {student['name']}\n")
-    print("==========================\n")
+    for student in storage:
+        print(f"{student['id']}. Student: {student['name']}\n")
+    print("==========================")
 
 
-def search_student(student_name: str) -> None:
+def search_student(student_id: int) -> None:
 
     for student in storage:
         info = (
             "==========================\n"
-            f"Student: {student['name']}\n"
+            f"{student['id']}. Student: {student['name']}\n"
             f"Marks: {student['marks']}\n"
             f"Info: {student['info']}\n"
-            "==========================\n"
+            "=========================="
         )
 
-        if student["name"] == student_name:
+        if student["id"] == student_id:
             print(info)
             return
 
-    print(f"Student {student_name} NOT found.")
+    print(f"Student {student_id} NOT found.")
 
 
 def ask_student_payload():
@@ -142,9 +154,9 @@ def student_management_command_handle(command: str):
         else:
             print("The student's data is NOT correct. Please try again.")
     elif command == "search":
-        name = input("\nEnter student's name: ")
-        if name:
-            search_student(student_name=name)
+        student_id: str = input("\nEnter student's ID: ")
+        if student_id:
+            search_student(student_id=int(student_id))
         else:
             print("Student's name is required to search.")
 
@@ -161,7 +173,7 @@ def handle_user_input():
     print(HELP_MESSAGE)
 
     while True:
-        command = input("Select command: ")
+        command = input("\n Select command: ")
 
         if command == "quit":
             print("\nThanks for using Jornal application.")
