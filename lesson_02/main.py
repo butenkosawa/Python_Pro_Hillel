@@ -89,14 +89,10 @@ storage: list[dict] = [
 
 # CRUD
 def add_student(student: dict):
-    if len(student) != 2:
-        return None
-
-    if not student.get("name") or not student.get("marks"):
-        return None
-    else:
-        storage.append(student)
-        return student
+    new_id = max([student["id"] for student in storage], default=0) + 1
+    student["id"] = new_id
+    storage.append(student)
+    return student
 
 
 def show_students():
@@ -107,40 +103,30 @@ def show_students():
 
 
 def search_student(student_id: int) -> None:
-
     for student in storage:
-        info = (
-            "==========================\n"
-            f"{student['id']}. Student: {student['name']}\n"
-            f"Marks: {student['marks']}\n"
-            f"Info: {student['info']}\n"
-            "=========================="
-        )
-
         if student["id"] == student_id:
-            print(info)
+            print(
+                "==========================\n"
+                f"{student['id']}. Student: {student['name']}\n"
+                f"Marks: {student['marks']}\n"
+                f"Info: {student['info']}\n"
+                "=========================="
+            )
             return
 
-    print(f"Student {student_id} NOT found.")
+    print(f"Student with ID {student_id} NOT found.")
 
 
 def ask_student_payload():
-    ask_prompt = (
-        "Enter student's payload data using text template: "
-        "John Doe;1,2,3,4,5\n"
-        "where 'John Doe' is a full name and [1,2,3,4,5] are marks.\n"
-        "The data must be separated by ';'\n"
-    )
+    name = input("Enter student's name: ")
+    while not name:
+        name = input("Student name is required. Please, enter the name again: ")
 
-    def parse(data) -> dict | None:
-        name, row_marks = data.split(';')
-        return {
-            "name": name,
-            "marks": [int(item) for item in row_marks.replace(" ", "").split(",")]
-        }
+    row_marks = input("Enter student's marks separated by ','.\nIf the student has no marks, press Enter: ")
+    details = input("Enter some detail information about student or press Enter: ")
+    marks = [int(item) for item in row_marks.replace(" ", "").split(",")] if row_marks else []
 
-    user_data: str = input(ask_prompt)
-    return parse(user_data)
+    return {"name": name, "marks": marks, "info": details}
 
 
 def student_management_command_handle(command: str):
@@ -148,20 +134,17 @@ def student_management_command_handle(command: str):
         show_students()
     elif command == "add":
         data = ask_student_payload()
-        if data:
-            student: dict = add_student(data)
-            print(f"Student {student['name']} is added")
-        else:
-            print("The student's data is NOT correct. Please try again.")
+        student: dict = add_student(data)
+        print(f"\nStudent {student['name']} added with ID {student['id']}")
     elif command == "search":
         student_id: str = input("\nEnter student's ID: ")
         if student_id:
             search_student(student_id=int(student_id))
         else:
-            print("Student's name is required to search.")
+            print("Student's ID is required to search.")
 
 
-def handle_user_input():
+def main():
     OPERATIONAL_COMMANDS = ("quit", "help")
     STUDENT_MANAGMENT_COMMANDS = ("show", "add", "search")
     AVAILADLE_COMMANDS = (*OPERATIONAL_COMMANDS, *STUDENT_MANAGMENT_COMMANDS)
@@ -185,7 +168,4 @@ def handle_user_input():
 
 
 if __name__ == '__main__':
-    handle_user_input()
-    # handle_command("show")
-    # handle_command("add")
-    # handle_command("show")
+    main()
