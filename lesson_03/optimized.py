@@ -59,16 +59,9 @@ storage: dict[int, dict] = {
 # CRUD
 # ─────────────────────────────────────────────────────────
 def add_student(student: dict) -> dict | None:
-    if len(student) != 2:
-        return None
-
-    if not student.get("name") or not student.get("marks"):
-        return None
-    else:
-        # action
-        next_id = max(storage.keys())
-        storage[next_id] = student
-        return student
+    next_id = max(storage.keys()) + 1
+    storage[next_id] = student
+    return student
 
 
 def show_students():
@@ -100,7 +93,29 @@ def update_student(id_: int, raw_input: str) -> dict | None:
         return None
 
     student["name"] = new_name
-    student["info"] = new_info
+    current_info = student["info"]
+
+    if current_info.lower() in new_info.lower():
+        student["info"] = new_info
+    elif new_info.lower() in current_info.lower():
+        pass
+    else:
+        student["info"] = f"{current_info}. {new_info}"
+
+    return student
+
+
+def add_mark(id_: int, raw_input: str) -> dict | None:
+    if raw_input == "":
+        return None
+
+    marks = [int(item) for item in raw_input.replace(" ", "").split(";")]
+
+    student: dict | None = storage.get(id_)
+    if student is None:
+        return None
+
+    student["marks"] += marks
 
     return student
 
@@ -109,23 +124,32 @@ def update_student(id_: int, raw_input: str) -> dict | None:
 # OPERATIONAL LAYER
 # ─────────────────────────────────────────────────────────
 def ask_student_payload() -> dict:
-    ask_prompt = (
-        "Enter student's payload data using text template: "
-        "John Doe;1,2,3,4,5\n"
-        "where 'John Doe' is a full name and [1,2,3,4,5] are marks.\n"
-        "The data must be separated by ';'"
-    )
+    name = input("Enter student's name: ")
+    while not name:
+        name = input("Student name is required. Please, enter the name again: ")
 
-    def parse(data) -> dict:
-        name, raw_marks = data.split(";")
+    row_marks = input("Enter student's marks separated by ','.\nIf the student has no marks, press Enter: ")
+    details = input("Enter some detail information about student or press Enter: ")
+    marks = [int(item) for item in row_marks.replace(" ", "").split(",")] if row_marks else []
 
-        return {
-            "name": name,
-            "marks": [int(item) for item in raw_marks.replace(" ", "").split(",")],
-        }
+    return {"name": name, "marks": marks, "info": details}
 
-    user_data: str = input(ask_prompt)
-    return parse(user_data)
+
+def ask_student_update():
+    student_id: str = input("\nEnter student's ID: ")
+    if not student_id:
+        print("Student ID must be specified for update")
+        return
+
+    id_ = int(student_id)
+    student: dict | None = storage.get(id_)
+    if student is None:
+        print(f"Student {student_id} not found")
+        return
+
+    show_student(student)
+
+    return id_
 
 
 def student_management_command_handle(command: str):
@@ -152,7 +176,6 @@ def student_management_command_handle(command: str):
             print("Error adding student")
         else:
             show_student(student)
-            print(f"Student {student_id} not found")
     elif command == "delete":
         student_id: str = input("\nEnter student's ID: ")
         if not student_id:
@@ -164,18 +187,7 @@ def student_management_command_handle(command: str):
             del storage[id_]
 
     elif command == "update":
-        student_id: str = input("\nEnter student's ID: ")
-        if not student_id:
-            print("Student ID must be specified for update")
-            return
-
-        id_ = int(student_id)
-        student: dict | None = storage.get(id_)
-        if student is None:
-            print(f"Student {student_id} not found")
-            return
-
-        show_student(student)
+        id_ = ask_student_update()
         print(
             f"\n\nTo update user's data, specify `name` and `info`, with `;` separator.\n"
         )
@@ -184,14 +196,28 @@ def student_management_command_handle(command: str):
         updated_student: dict | None = update_student(id_=id_, raw_input=user_input)
 
         if updated_student is None:
-            print("Erorr on updating student")
+            print("Error on updating student")
+        else:
+            print(f"Student {updated_student['name']} is updated")
+
+    elif command == "marks":
+        id_ = ask_student_update()
+        print(
+            f"\n\nTo add student grades, enter them separated by `;`\n"
+        )
+
+        user_input: str = input("Enter: ")
+        updated_student: dict | None = add_mark(id_=id_, raw_input=user_input)
+
+        if updated_student is None:
+            print("Error on updating student marks")
         else:
             print(f"Student {updated_student['name']} is updated")
 
 
 def handle_user_input():
     OPERATIONAL_COMMANDS = ("quit", "help")
-    STUDENT_MANAGEMENT_COMMANDS = ("show", "add", "search", "delete", "update")
+    STUDENT_MANAGEMENT_COMMANDS = ("show", "add", "search", "delete", "update", "marks")
     AVAILABLE_COMMANDS = (*OPERATIONAL_COMMANDS, *STUDENT_MANAGEMENT_COMMANDS)
 
     HELP_MESSAGE = (
