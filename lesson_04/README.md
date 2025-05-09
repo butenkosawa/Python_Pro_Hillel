@@ -229,3 +229,22 @@ import tempfile
 with tempfile.NamedTemporaryFile(delete=False) as temp:
     temp.write(b"Temporary data")
 ```
+
+## Repository
+
+```python
+class Repository:
+    """
+    STORAGE: PATH / ADDRESS
+    METHODS
+    """
+
+    def __init__(self):
+        self.data = open(STORAGE_FILE_NAME / "data/students.csv")
+
+    def load(self):
+        pass
+
+    def save(self):
+        pass
+```

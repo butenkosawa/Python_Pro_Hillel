@@ -1,3 +1,7 @@
+import csv
+from pathlib import Path
+
+
 # ─────────────────────────────────────────────────────────
 # STORAGE SIMULATION
 # ─────────────────────────────────────────────────────────
@@ -54,76 +58,132 @@ storage: dict[int, dict] = {
     },
 }
 
+STORAGE_FILE_NAME = Path(__file__).parent.parent / "storage/students.csv"
+
 
 # ─────────────────────────────────────────────────────────
-# CRUD
+# INFRASTRUCTURE
 # ─────────────────────────────────────────────────────────
-def add_student(student: dict) -> dict | None:
-    next_id = max(storage.keys()) + 1
-    storage[next_id] = student
-    return student
+class Repository:
+    """
+    RAM: John, Marry, Mark
+    SSD: John, Marry
+    """
+    def __init__(self):
+        self.file = open(STORAGE_FILE_NAME, "r")
+        self.students = self.get_storage()
+
+        # close after reading
+        self.file.close()
+
+    def get_storage(self):
+        self.file.seek(0)
+        reader = csv.DictReader(self.file)
+        return list(reader)
+
+    def add_student(self, student: dict):
+        self.students.append(student)
+        writer = csv.DictWriter(self.file, fieldnames=["id", "name", "marks", "info"])
+        writer.writerow(student)
 
 
-def show_students():
-    print("=========================")
-    for id_, student in storage.items():
-        print(f"{id_}. Student {student['name']}")
-    print("=========================\n")
+    def update_storage(self, students: list[dict]):
+        file = open(STORAGE_FILE_NAME, "w")
+        writer = csv.DictWriter(file, fieldnames=["id", "name", "marks", "info"])
+        writer.writeheader()
+        for student in students:
+            writer.writerow(student)
+
+        file.close()
+
+    # def __del__(self):
+    #     self.file.seek(0)
+    #     writer = csv.DictWriter(self.file, fieldnames=["id", "name", "marks", "info"])
+    #     for student in self.students:
+    #         writer.writerow(student)
+    #     self.file.close()
+
+repo = Repository()
+
+def inject_repository(func):
+    def inner(*args, **kwargs):
+        return func(*args, repo=repo, **kwargs)
+    return inner
+
+# ─────────────────────────────────────────────────────────
+# DOMAIN (students, users, notification)
+# ─────────────────────────────────────────────────────────
+class StudentService:
+    def __init__(self):
+        self.repository = Repository()
+
+    @inject_repository
+    def add_student(self, student: dict) -> dict | None:
+        next_id = max(storage.keys()) + 1
+        storage[next_id] = student
+        return student
+
+    @inject_repository
+    def show_students(self, repo: Repository):
+        print("=========================")
+        for student in repo.students:
+            print(f"{student['id']}. Student {student['name']}")
+        print("=========================\n")
 
 
-def show_student(student: dict) -> None:
-    print(
-        "=========================\n"
-        f"Student {student['name']}\n"
-        f"Marks: {student['marks']}\n"
-        f"Info: {student['info']}\n"
-        "========================="
-    )
+    def show_student(self, student: dict) -> None:
+        print(
+            "=========================\n"
+            f"Student {student['name']}\n"
+            f"Marks: {student['marks']}\n"
+            f"Info: {student['info']}\n"
+            "========================="
+        )
 
 
-def update_student(id_: int, name: str = None, info: str = None) -> dict | None:
-    student: dict | None = storage.get(id_)
-    if student is None:
-        return None
-
-    if name:
-        student["name"] = name
-
-    if info:
-        current_info = student["info"]
-
-        if current_info.lower().strip() in info.lower().strip():
-            student["info"] = info
-        elif info.lower() in current_info.lower():
-            student["info"] = info
-        else:
-            student["info"] = f"{current_info}. {info}"
-
-    return student
-
-
-def add_mark(id_: int, raw_input: str) -> dict | None:
-    if raw_input == "":
-        return None
-
-    raw_input = raw_input.replace(" ", "").split(",")
-
-    if all([item.isdigit() for item in raw_input]):
-        marks = [int(item) for item in raw_input]
+    def update_student(self, id_: int, name: str = None, info: str = None) -> dict | None:
         student: dict | None = storage.get(id_)
-
         if student is None:
             return None
 
-        student["marks"] += marks
+        if name:
+            student["name"] = name
+
+        if info:
+            current_info = student["info"]
+
+            if current_info.lower().strip() in info.lower().strip():
+                student["info"] = info
+            elif info.lower() in current_info.lower():
+                student["info"] = info
+            else:
+                student["info"] = f"{current_info}. {info}"
+
         return student
 
-    else:
-        print("Incorrect input of student marks")
-        return None
+
+    def add_mark(self, id_: int, raw_input: str) -> dict | None:
+        if raw_input == "":
+            return None
+
+        raw_input = raw_input.replace(" ", "").split(",")
+
+        if all([item.isdigit() for item in raw_input]):
+            marks = [int(item) for item in raw_input]
+            student: dict | None = storage.get(id_)
+
+            if student is None:
+                return None
+
+            student["marks"] += marks
+            return student
+
+        else:
+            print("Incorrect input of student marks")
+            return None
 
 # ─────────────────────────────────────────────────────────
-# OPERATIONAL LAYER
+# OPERATIONAL (APPLICATION) LAYER
 # ─────────────────────────────────────────────────────────
 def ask_student_payload() -> dict:
     name = input("Enter student's name: ")
@@ -155,85 +215,94 @@ def ask_student_update():
 
 
 def student_management_command_handle(command: str):
+    students_service = StudentService()
     if command == "show":
-        show_students()
+        students_service.show_students()
 
-    elif command == "add":
-        data = ask_student_payload()
-        if data:
-            student: dict | None = add_student(data)
-            if student is None:
-                print("Error adding student")
-            else:
-                print(f"Student: {student['name']} is added")
-        else:
-            print("The student's data is NOT correct. Please try again")
+    # elif command == "add":
+    #     data = ask_student_payload()
+    #     repo = Repository()
+    #     repo.add_student(data)
+    #     repo.students
+    #
+    #     if data:
+    #         student: dict | None = add_student(data)
+    #         if student is None:
+    #             print("Error adding student")
+    #         else:
+    #             print(f"Student: {student['name']} is added")
+    #     else:
+    #         print("The student's data is NOT correct. Please try again")
+    #
+    # elif command == "search":
+    #     student_id: str = input("\nEnter student's ID: ")
+    #     if not student_id:
+    #         print("Student's ID is required to search")
+    #         return
+    #
+    #     students = get_storage()
+    #
+    #     student: dict | None = storage.get(int(student_id))
+    #     if student is None:
+    #         print("Error adding student")
+    #     else:
+    #         show_student(student_id, student)
+    #
+    # elif command == "delete":
+    #     student_id: str = input("\nEnter student's ID: ")
+    #     if not student_id:
+    #         print("Student's id is required to delete")
+    #         return
+    #
+    #     id_ = int(student_id)
+    #     if storage.get(id_):
+    #         del storage[id_]
+    #
+    # elif command == "update":
+    #     id_ = ask_student_update()
+    #     if id_:
+    #         print(
+    #             f"What information about student you want to update?\n"
+    #             f"If NAME pres `N`, if INFO press `I`, if NAME and INFO press `A`.\n"
+    #         )
+    #
+    #         user_input: str = input("Enter: ").upper()
+    #
+    #         if user_input == "N":
+    #             new_name: str = input("Enter new student's name: ")
+    #             updated_student: dict | None = update_student(id_=id_, name=new_name)
+    #             print(f"Student {updated_student['name']} is updated")
+    #         elif user_input == "I":
+    #             new_info: str = input("Enter new student's info: ")
+    #             updated_student: dict | None = update_student(id_=id_, info=new_info)
+    #             print(f"Student {updated_student['name']} is updated")
+    #         elif user_input == "A":
+    #             new_name: str = input("Enter new student's name: ")
+    #             new_info: str = input("Enter new student's info: ")
+    #             updated_student: dict | None = update_student(id_=id_, name=new_name, info=new_info)
+    #             print(f"Student {updated_student['name']} is updated")
+    #         else:
+    #             print("Error of choice")
+    #     else:
+    #         print("Error on updating student")
+    #
+    # elif command == "marks":
+    #     id_ = ask_student_update()
+    #     if id_:
+    #         print(
+    #             f"To add student grades, enter them separated by `,`"
+    #         )
+    #
+    #         user_input: str = input("Enter: ")
+    #         updated_student: dict | None = add_mark(id_=id_, raw_input=user_input)
+    #         if updated_student:
+    #             print(f"Student {updated_student['name']} is updated")
+    #     else:
+    #         print("Error on updating student marks")
 
-    elif command == "search":
-        student_id: str = input("\nEnter student's ID: ")
-        if not student_id:
-            print("Student's ID is required to search")
-            return
-
-        student: dict | None = storage.get(int(student_id))
-        if student is None:
-            print("Error adding student")
-        else:
-            show_student(student)
-
-    elif command == "delete":
-        student_id: str = input("\nEnter student's ID: ")
-        if not student_id:
-            print("Student's id is required to delete")
-            return
-
-        id_ = int(student_id)
-        if storage.get(id_):
-            del storage[id_]
-
-    elif command == "update":
-        id_ = ask_student_update()
-        if id_:
-            print(
-                f"What information about student you want to update?\n"
-                f"If NAME pres `N`, if INFO press `I`, if NAME and INFO press `A`.\n"
-            )
-
-            user_input: str = input("Enter: ").upper()
-
-            if user_input == "N":
-                new_name: str = input("Enter new student's name: ")
-                updated_student: dict | None = update_student(id_=id_, name=new_name)
-                print(f"Student {updated_student['name']} is updated")
-            elif user_input == "I":
-                new_info: str = input("Enter new student's info: ")
-                updated_student: dict | None = update_student(id_=id_, info=new_info)
-                print(f"Student {updated_student['name']} is updated")
-            elif user_input == "A":
-                new_name: str = input("Enter new student's name: ")
-                new_info: str = input("Enter new student's info: ")
-                updated_student: dict | None = update_student(id_=id_, name=new_name, info=new_info)
-                print(f"Student {updated_student['name']} is updated")
-            else:
-                print("Error of choice")
-        else:
-            print("Error on updating student")
-
-    elif command == "marks":
-        id_ = ask_student_update()
-        if id_:
-            print(
-                f"To add student grades, enter them separated by `,`"
-            )
-
-            user_input: str = input("Enter: ")
-            updated_student: dict | None = add_mark(id_=id_, raw_input=user_input)
-            if updated_student:
-                print(f"Student {updated_student['name']} is updated")
-        else:
-            print("Error on updating student marks")
-
-
+# ─────────────────────────────────────────────────────────
+# PRESENTATION LEVEL
+# ─────────────────────────────────────────────────────────
 def handle_user_input():
     OPERATIONAL_COMMANDS = ("quit", "help")
     STUDENT_MANAGEMENT_COMMANDS = ("show", "add", "search", "delete", "update", "marks")
