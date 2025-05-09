@@ -65,9 +65,9 @@ def add_student(student: dict) -> dict | None:
 
 
 def show_students():
-    print("=========================\n")
+    print("=========================")
     for id_, student in storage.items():
-        print(f"{id_}. Student {student['name']}\n")
+        print(f"{id_}. Student {student['name']}")
     print("=========================\n")
 
 
@@ -77,30 +77,27 @@ def show_student(student: dict) -> None:
         f"Student {student['name']}\n"
         f"Marks: {student['marks']}\n"
         f"Info: {student['info']}\n"
-        "=========================\n"
+        "========================="
     )
 
 
-def update_student(id_: int, raw_input: str) -> dict | None:
-    parsing_result = raw_input.split(";")
-    if len(parsing_result) != 2:
-        return None
-
-    new_name, new_info = parsing_result
-
+def update_student(id_: int, name: str = None, info: str = None) -> dict | None:
     student: dict | None = storage.get(id_)
     if student is None:
         return None
 
-    student["name"] = new_name
-    current_info = student["info"]
+    if name:
+        student["name"] = name
 
-    if current_info.lower() in new_info.lower():
-        student["info"] = new_info
-    elif new_info.lower() in current_info.lower():
-        pass
-    else:
-        student["info"] = f"{current_info}. {new_info}"
+    if info:
+        current_info = student["info"]
+
+        if current_info.lower().strip() in info.lower().strip():
+            student["info"] = info
+        elif info.lower() in current_info.lower():
+            student["info"] = info
+        else:
+            student["info"] = f"{current_info}. {info}"
 
     return student
 
@@ -109,16 +106,21 @@ def add_mark(id_: int, raw_input: str) -> dict | None:
     if raw_input == "":
         return None
 
-    marks = [int(item) for item in raw_input.replace(" ", "").split(";")]
+    raw_input = raw_input.replace(" ", "").split(",")
 
-    student: dict | None = storage.get(id_)
-    if student is None:
+    if all([item.isdigit() for item in raw_input]):
+        marks = [int(item) for item in raw_input]
+        student: dict | None = storage.get(id_)
+
+        if student is None:
+            return None
+
+        student["marks"] += marks
+        return student
+
+    else:
+        print("Incorrect input of student marks")
         return None
-
-    student["marks"] += marks
-
-    return student
-
 
 # ─────────────────────────────────────────────────────────
 # OPERATIONAL LAYER
@@ -155,6 +157,7 @@ def ask_student_update():
 def student_management_command_handle(command: str):
     if command == "show":
         show_students()
+
     elif command == "add":
         data = ask_student_payload()
         if data:
@@ -165,6 +168,7 @@ def student_management_command_handle(command: str):
                 print(f"Student: {student['name']} is added")
         else:
             print("The student's data is NOT correct. Please try again")
+
     elif command == "search":
         student_id: str = input("\nEnter student's ID: ")
         if not student_id:
@@ -176,6 +180,7 @@ def student_management_command_handle(command: str):
             print("Error adding student")
         else:
             show_student(student)
+
     elif command == "delete":
         student_id: str = input("\nEnter student's ID: ")
         if not student_id:
@@ -188,31 +193,45 @@ def student_management_command_handle(command: str):
 
     elif command == "update":
         id_ = ask_student_update()
-        print(
-            f"\n\nTo update user's data, specify `name` and `info`, with `;` separator.\n"
-        )
+        if id_:
+            print(
+                f"What information about student you want to update?\n"
+                f"If NAME pres `N`, if INFO press `I`, if NAME and INFO press `A`.\n"
+            )
 
-        user_input: str = input("Enter: ")
-        updated_student: dict | None = update_student(id_=id_, raw_input=user_input)
+            user_input: str = input("Enter: ").upper()
 
-        if updated_student is None:
-            print("Error on updating student")
+            if user_input == "N":
+                new_name: str = input("Enter new student's name: ")
+                updated_student: dict | None = update_student(id_=id_, name=new_name)
+                print(f"Student {updated_student['name']} is updated")
+            elif user_input == "I":
+                new_info: str = input("Enter new student's info: ")
+                updated_student: dict | None = update_student(id_=id_, info=new_info)
+                print(f"Student {updated_student['name']} is updated")
+            elif user_input == "A":
+                new_name: str = input("Enter new student's name: ")
+                new_info: str = input("Enter new student's info: ")
+                updated_student: dict | None = update_student(id_=id_, name=new_name, info=new_info)
+                print(f"Student {updated_student['name']} is updated")
+            else:
+                print("Error of choice")
         else:
-            print(f"Student {updated_student['name']} is updated")
+            print("Error on updating student")
 
     elif command == "marks":
         id_ = ask_student_update()
-        print(
-            f"\n\nTo add student grades, enter them separated by `;`\n"
-        )
+        if id_:
+            print(
+                f"To add student grades, enter them separated by `,`"
+            )
 
-        user_input: str = input("Enter: ")
-        updated_student: dict | None = add_mark(id_=id_, raw_input=user_input)
-
-        if updated_student is None:
-            print("Error on updating student marks")
+            user_input: str = input("Enter: ")
+            updated_student: dict | None = add_mark(id_=id_, raw_input=user_input)
+            if updated_student:
+                print(f"Student {updated_student['name']} is updated")
         else:
-            print(f"Student {updated_student['name']} is updated")
+            print("Error on updating student marks")
 
 
 def handle_user_input():
