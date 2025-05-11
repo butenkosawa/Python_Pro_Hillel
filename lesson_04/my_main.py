@@ -82,13 +82,16 @@ class Repository:
         students: dict = {}
         for student in reader:
             id_ = student.pop('id')
+            if student["marks"]:
+                student["marks"] = [int(item) for item in student["marks"].split(',')]
+            else:
+                student["marks"] = []
             students[int(id_)] = student
         return students
 
     def add_student(self, student: dict):
         next_id = max(self.students.keys(), default=0) + 1
         self.students[next_id] = student
-        self.update_storage()
 
         return student
 
@@ -96,6 +99,7 @@ class Repository:
         storage_ = []
         for k, v in self.students.items():
             student_ = {"id": k}
+            v["marks"] = ",".join(list(map(lambda x: str(x), v["marks"])))
             student_.update(v)
             storage_.append(student_)
 
@@ -131,6 +135,7 @@ def inject_repository(func):
 # DOMAIN (students, users, notification)
 # ─────────────────────────────────────────────────────────
 class StudentService:
+
     def __init__(self):
         self.repository = Repository()
 
@@ -176,30 +181,26 @@ class StudentService:
             else:
                 student["info"] = f"{current_info}. {info}"
 
-        repo.update_storage()
         print(f"Student {student['name']} is updated")
 
         return student
 
     @inject_repository
-    def add_mark(self, id_: int, repo: Repository, marks: str) -> dict | None:
-        if marks == "":
+    def add_mark(self, id_: int, repo: Repository, raw_input: str) -> dict | None:
+        if raw_input == "":
             return None
 
-        marks = marks.replace(" ", "")
+        raw_input = raw_input.replace(" ", "").split(",")
 
-        if all([item.isdigit() for item in marks.split(",")]):
+        if all([item.isdigit() for item in raw_input]):
+            marks = [int(item) for item in raw_input]
             student: dict | None = repo.students.get(id_)
 
             if student is None:
                 return None
 
-            if student["marks"]:
-                student["marks"] += "," + marks
-            else:
-                student["marks"] = marks
+            student["marks"] += marks
 
-            repo.update_storage()
             print(f"Student {student['name']} is updated")
 
             return student
@@ -212,14 +213,23 @@ class StudentService:
 # ─────────────────────────────────────────────────────────
 # OPERATIONAL (APPLICATION) LAYER
 # ─────────────────────────────────────────────────────────
-def ask_student_payload() -> dict:
+def ask_student_payload() -> dict | None:
     name = input("Enter student's name: ")
     while not name:
         name = input("Student name is required. Please, enter the name again: ")
 
     row_marks = input("Enter student's marks separated by ','.\nIf the student has no marks, press Enter: ")
+    if row_marks:
+        row_marks = row_marks.replace(" ", "").split(",")
+        if all([item.isdigit() for item in row_marks]):
+            marks = [int(item) for item in row_marks]
+        else:
+            print("Incorrect input of student marks")
+            return
+    else:
+        marks = []
+
     details = input("Enter some detail information about student or press Enter: ")
-    marks = [int(item) for item in row_marks.replace(" ", "").split(",")] if row_marks else ""
 
     return {"name": name, "marks": marks, "info": details}
 
@@ -276,7 +286,6 @@ def student_management_command_handle(command: str):
         id_ = int(student_id)
         if repo.students.get(id_):
             del repo.students[id_]
-            repo.update_storage()
 
     elif command == "update":
         student_id: str = input("\nEnter student's ID: ")
@@ -325,7 +334,7 @@ def student_management_command_handle(command: str):
             )
 
             user_input: str = input("Enter: ")
-            students_service.add_mark(id_=id_, marks=user_input)
+            students_service.add_mark(id_=id_, raw_input=user_input)
         else:
             print("Error on updating student marks")
 
@@ -349,6 +358,7 @@ def handle_user_input():
         command = input("\n Select command: ")
 
         if command == "quit":
+            repo.update_storage()
             print("\nThanks for using the Journal application")
             break
         elif command == "help":
