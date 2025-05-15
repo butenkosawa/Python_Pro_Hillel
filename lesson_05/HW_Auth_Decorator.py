@@ -8,6 +8,7 @@ About the code:
 
 NOTES
 """
+from functools import wraps
 
 class User:
     def __init__(self, username: str, password: str):
@@ -23,6 +24,7 @@ users = [
 def auth(func):
     authorized_user = {"user": None}
 
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if not authorized_user["user"]:
             while True:
